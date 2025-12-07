@@ -1,0 +1,142 @@
+$navbar-height: 70px;
+$sidebar-width: 244px;
+$primary: #0090e7;
+
+.navbar {
+  position: fixed;
+  top: 0;
+  left: $sidebar-width;
+  right: 0;
+  height: $navbar-height;
+  background-color: var(--navbar-bg);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 1.5rem;
+  z-index: 999;
+  box-shadow: 0 4px 20px var(--shadow-color);
+  transition: background-color 0.3s ease;
+}
+
+.navbar-left {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.page-title {
+  font-size: 1.25rem;
+  font-weight: 500;
+  color: var(--body-color);
+  margin: 0;
+  letter-spacing: -0.25px;
+}
+
+.sidebar-toggle {
+  background: transparent;
+  border: none;
+  color: var(--body-color);
+  font-size: 1.25rem;
+  padding: 0.5rem;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: background-color 0.2s ease;
+
+  &:hover {
+    background-color: var(--hover-overlay);
+  }
+}
+
+.navbar-right {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.navbar-icon-btn {
+  background: transparent;
+  border: none;
+  color: var(--body-color);
+  font-size: 1.125rem;
+  padding: 0.5rem;
+  cursor: pointer;
+  border-radius: 4px;
+  position: relative;
+  transition: background-color 0.2s ease;
+
+  &:hover {
+    background-color: var(--hover-overlay);
+  }
+
+  .notification-badge {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    background-color: #fc424a;
+    color: white;
+    font-size: 0.625rem;
+    font-weight: 600;
+    padding: 2px 5px;
+    border-radius: 10px;
+    min-width: 16px;
+    text-align: center;
+  }
+}
+
+.user-dropdown {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: transparent;
+  border: none;
+  color: var(--body-color);
+  cursor: pointer;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  transition: background-color 0.2s ease;
+
+  &:hover {
+    background-color: var(--hover-overlay);
+  }
+
+  .user-avatar {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    object-fit: cover;
+  }
+
+  .user-name {
+    font-size: 0.875rem;
+    font-weight: 500;
+    max-width: 120px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .bi-chevron-down {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+  }
+}
+
+// Collapsed sidebar state
+:host-context(.sidebar-collapsed) {
+  .navbar {
+    left: 70px;
+  }
+}
+
+// Responsive adjustments
+@media (max-width: 991px) {
+  .navbar {
+    left: 0;
+  }
+}
+
+@media (max-width: 576px) {
+  .navbar-right {
+    gap: 0.5rem;
+  }
+}

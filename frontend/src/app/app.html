@@ -1,0 +1,11 @@
+@if (hideLayout()) {
+  <router-outlet />
+} @else {
+  <div class="app-container" [class.sidebar-collapsed]="sidebarCollapsed()">
+    <app-sidebar></app-sidebar>
+    <app-navbar (sidebarToggled)="toggleSidebar()"></app-navbar>
+    <main class="main-content">
+      <router-outlet />
+    </main>
+  </div>
+}

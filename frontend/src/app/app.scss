@@ -1,0 +1,79 @@
+$sidebar-width: 244px;
+$sidebar-collapsed-width: 70px;
+$navbar-height: 70px;
+
+.app-container {
+  min-height: 100vh;
+}
+
+.main-content {
+  margin-left: $sidebar-width;
+  margin-top: $navbar-height;
+  padding: 1.5rem;
+  min-height: calc(100vh - #{$navbar-height});
+  transition: margin-left 0.3s ease;
+}
+
+// Sidebar collapsed state
+.sidebar-collapsed {
+  .main-content {
+    margin-left: $sidebar-collapsed-width;
+  }
+}
+
+// Responsive - hide sidebar on mobile by default
+@media (max-width: 991px) {
+  app-sidebar {
+    .sidebar {
+      transform: translateX(-100%);
+    }
+  }
+
+  app-navbar {
+    .navbar {
+      left: 0;
+    }
+  }
+
+  .main-content {
+    margin-left: 0;
+  }
+
+  // Show sidebar when toggled on mobile
+  .sidebar-collapsed {
+    app-sidebar {
+      .sidebar {
+        transform: translateX(0);
+        width: $sidebar-width;
+
+        .brand-text,
+        .profile-info,
+        .nav-text,
+        .nav-category {
+          display: block;
+        }
+
+        .nav-link {
+          justify-content: flex-start;
+          padding: 0.8rem 1.25rem;
+        }
+
+        .nav-icon {
+          margin-right: 0.5rem;
+        }
+      }
+    }
+
+    // Overlay
+    &::after {
+      content: '';
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: rgba(0, 0, 0, 0.5);
+      z-index: 999;
+    }
+  }
+}

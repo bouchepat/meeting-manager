@@ -1,0 +1,216 @@
+$sidebar-width: 244px;
+$sidebar-collapsed-width: 70px;
+$primary: #0090e7;
+
+.sidebar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: $sidebar-width;
+  background-color: var(--sidebar-bg);
+  z-index: 1000;
+  overflow-y: auto;
+  overflow-x: hidden;
+  transition: width 0.3s ease, background-color 0.3s ease;
+
+  &::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: var(--hover-overlay);
+    border-radius: 2px;
+  }
+}
+
+// Collapsed state styles (applied via host-context)
+:host-context(.sidebar-collapsed) {
+  .sidebar {
+    width: $sidebar-collapsed-width;
+  }
+
+  .brand-text,
+  .profile-info,
+  .nav-text,
+  .nav-category {
+    opacity: 0;
+    width: 0;
+    overflow: hidden;
+    white-space: nowrap;
+    transition: opacity 0.2s ease, width 0.2s ease;
+  }
+
+  .sidebar-brand a {
+    justify-content: center;
+  }
+
+  .sidebar-profile .profile-wrapper {
+    justify-content: center;
+  }
+
+  .profile-image {
+    margin-right: 0;
+  }
+
+  .nav-link {
+    justify-content: center;
+    padding: 0.8rem;
+  }
+
+  .nav-icon {
+    margin-right: 0;
+  }
+}
+
+.sidebar-brand {
+  padding: 1.5rem 1.25rem;
+  display: flex;
+  align-items: center;
+
+  a {
+    display: flex;
+    align-items: center;
+    text-decoration: none;
+    color: var(--sidebar-menu-active-color);
+  }
+
+  .brand-logo {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(to right, $primary, #33a8ed);
+    border-radius: 8px;
+    margin-right: 0.75rem;
+
+    i {
+      font-size: 1.25rem;
+      color: white;
+    }
+  }
+
+  .brand-text {
+    font-size: 1.125rem;
+    font-weight: 600;
+    letter-spacing: -0.5px;
+  }
+}
+
+.sidebar-profile {
+  padding: 1rem 1.25rem;
+  border-top: 1px solid var(--border-color);
+  border-bottom: 1px solid var(--border-color);
+
+  .profile-wrapper {
+    display: flex;
+    align-items: center;
+  }
+
+  .profile-image {
+    width: 42px;
+    height: 42px;
+    border-radius: 50%;
+    object-fit: cover;
+    margin-right: 0.75rem;
+  }
+
+  .profile-info {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .profile-name {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--sidebar-menu-active-color);
+    line-height: 1.2;
+  }
+
+  .profile-role {
+    font-size: 0.75rem;
+    color: var(--sidebar-menu-color);
+  }
+}
+
+.sidebar-nav {
+  padding: 1rem 0;
+}
+
+.nav-category {
+  display: block;
+  padding: 0.5rem 1.25rem;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--sidebar-menu-color);
+}
+
+.nav-menu {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.nav-item {
+  margin-bottom: 2px;
+
+  .nav-link {
+    display: flex;
+    align-items: center;
+    padding: 0.8rem 1.25rem;
+    color: var(--sidebar-menu-color);
+    text-decoration: none;
+    transition: all 0.2s ease;
+    position: relative;
+
+    &:hover {
+      background-color: var(--sidebar-menu-hover-bg);
+      color: var(--sidebar-menu-active-color);
+
+      .nav-icon i {
+        color: $primary;
+      }
+    }
+
+    &.active {
+      background-color: var(--sidebar-menu-active-bg);
+      color: var(--sidebar-menu-active-color);
+
+      &::before {
+        content: '';
+        position: absolute;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        width: 3px;
+        background-color: $primary;
+      }
+
+      .nav-icon i {
+        color: $primary;
+      }
+    }
+
+    .nav-icon {
+      width: 32px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-right: 0.5rem;
+
+      i {
+        font-size: 1rem;
+        color: var(--sidebar-icon-color);
+        transition: color 0.2s ease;
+      }
+    }
+
+    .nav-text {
+      font-size: 0.9375rem;
+      font-weight: 400;
+    }
+  }
+}

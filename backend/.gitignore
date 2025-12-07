@@ -1,0 +1,48 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+
+# Environment files (NEVER commit these!)
+.env
+.env.local
+.env.*.local
+.env.docker
+
+# Google Cloud / Firebase credentials (NEVER commit these!)
+google-credentials.json
+*-credentials.json
+*.json.key
+service-account*.json
+firebase-adminsdk*.json
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# Runtime data
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage
+coverage/
+.nyc_output/
+
+# IDE
+.idea/
+.vscode/
+*.sublime-*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Uploads (large files, stored separately)
+uploads/
+
+# TypeScript
+*.tsbuildinfo

@@ -1,0 +1,466 @@
+<div class="container py-4">
+  <!-- Toast Message -->
+  <div
+    class="alert alert-dismissible fade show"
+    [ngClass]="{
+      'alert-success': toastType() === 'success',
+      'alert-danger': toastType() === 'error',
+      'alert-info': toastType() === 'info'
+    }"
+    role="alert"
+    *ngIf="toastMessage()">
+    {{ toastMessage() }}
+    <button type="button" class="btn-close" (click)="toastMessage.set(null)"></button>
+  </div>
+
+  <!-- Microphone Permission Section -->
+  <div class="text-center py-5" *ngIf="!hasPermission()">
+    <div class="card permission-card">
+      <div class="card-body py-5">
+        <i class="bi bi-mic-mute-fill display-1 text-warning"></i>
+        <h3 class="mt-4">Microphone Access Required</h3>
+        <p class="text-secondary mb-4">
+          This application needs access to your microphone to record meetings.
+        </p>
+        <button
+          class="btn btn-primary btn-lg"
+          (click)="requestMicrophonePermission()"
+          [disabled]="isRequestingPermission()">
+          <i class="bi" [ngClass]="isRequestingPermission() ? 'bi-hourglass-split' : 'bi-mic-fill'"></i>
+          {{ isRequestingPermission() ? 'Requesting...' : 'Grant Microphone Access' }}
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Recording Interface -->
+  <div *ngIf="hasPermission()">
+    <div class="row">
+      <!-- Left Column: Meeting Details & Speaker Enrollment -->
+      <div class="col-lg-6 mb-4" *ngIf="!isRecording() && !recordingComplete()">
+        <!-- Meeting Details Form -->
+        <div class="card mb-4">
+          <div class="card-header">
+            <h5 class="mb-0">
+              <i class="bi bi-info-circle me-2"></i>
+              Meeting Details
+            </h5>
+          </div>
+          <div class="card-body">
+            <div class="mb-3">
+              <label for="meetingTitle" class="form-label">Meeting Title <span class="text-danger">*</span></label>
+              <input
+                type="text"
+                class="form-control"
+                id="meetingTitle"
+                [(ngModel)]="meetingTitle"
+                placeholder="Enter meeting title"
+                required>
+            </div>
+
+            <div class="mb-3">
+              <label for="meetingDescription" class="form-label">Description (Optional)</label>
+              <textarea
+                class="form-control"
+                id="meetingDescription"
+                [(ngModel)]="meetingDescription"
+                placeholder="Add meeting description"
+                rows="3"></textarea>
+            </div>
+
+            <!-- Transcription Toggle -->
+            <div class="mb-0">
+              <div class="form-check form-switch">
+                <input
+                  class="form-check-input"
+                  type="checkbox"
+                  id="enableTranscription"
+                  [checked]="enableTranscription()"
+                  (change)="toggleTranscription()">
+                <label class="form-check-label" for="enableTranscription">
+                  <i class="bi bi-mic me-1"></i>
+                  Enable live transcription
+                </label>
+              </div>
+              <small class="text-muted" *ngIf="!transcriptionStatus().speechServiceAvailable">
+                <i class="bi bi-exclamation-triangle text-warning me-1"></i>
+                Transcription service not configured
+              </small>
+            </div>
+          </div>
+        </div>
+
+        <!-- Speaker Enrollment Card -->
+        <div *ngIf="enableTranscription() && transcriptionStatus().speechServiceAvailable && !enrollmentComplete()" class="card mb-4">
+          <div class="card-header">
+            <h5 class="mb-0">
+              <i class="bi bi-people me-2"></i>
+              Speaker Enrollment (Optional)
+            </h5>
+          </div>
+          <div class="card-body">
+            <p class="text-muted small mb-3">
+              Enroll speakers before recording so the transcript shows their names instead of "Speaker 1", "Speaker 2", etc.
+            </p>
+
+            <!-- Enrollment Not Started -->
+            <div *ngIf="!isEnrolling()">
+              <button
+                class="btn btn-outline-primary me-2"
+                (click)="startEnrollment()"
+                [disabled]="!meetingTitle.trim()">
+                <i class="bi bi-person-plus me-1"></i>
+                Start Enrollment
+              </button>
+              <button
+                class="btn btn-link text-muted"
+                (click)="skipEnrollment()">
+                Skip
+              </button>
+            </div>
+
+            <!-- Enrollment In Progress -->
+            <div *ngIf="isEnrolling()">
+              <div class="alert alert-info py-2 mb-3">
+                <i class="bi bi-info-circle me-2"></i>
+                Each person should say their name, e.g. <strong>"My name is John"</strong> or <strong>"I'm Sarah"</strong>.
+                <br><small class="text-muted">You can also spell it: "My name is Xiaowei, X-I-A-O-W-E-I"</small>
+              </div>
+
+              <!-- Enrolled Speakers -->
+              <div *ngIf="enrolledSpeakerCount() > 0" class="mb-3">
+                <h6 class="text-success">
+                  <i class="bi bi-check-circle me-1"></i>
+                  Enrolled Speakers ({{ enrolledSpeakerCount() }}):
+                </h6>
+                <div class="d-flex flex-wrap gap-2">
+                  <ng-container *ngFor="let entry of speakerMappings() | keyvalue">
+                    <!-- Edit mode -->
+                    <div *ngIf="editingSpeakerTag() === +entry.key" class="input-group input-group-sm" style="width: auto;">
+                      <input
+                        type="text"
+                        class="form-control form-control-sm"
+                        [(ngModel)]="editingSpeakerName"
+                        (keyup.enter)="saveSpeakerName()"
+                        (keyup.escape)="cancelEditingSpeaker()"
+                        style="width: 120px;"
+                        placeholder="Enter name">
+                      <button class="btn btn-success btn-sm" (click)="saveSpeakerName()" title="Save">
+                        <i class="bi bi-check"></i>
+                      </button>
+                      <button class="btn btn-secondary btn-sm" (click)="cancelEditingSpeaker()" title="Cancel">
+                        <i class="bi bi-x"></i>
+                      </button>
+                    </div>
+                    <!-- Display mode -->
+                    <span
+                      *ngIf="editingSpeakerTag() !== +entry.key"
+                      class="badge d-flex align-items-center gap-1"
+                      [style.background-color]="getSpeakerColor(+entry.key)">
+                      {{ entry.value }}
+                      <button
+                        class="btn btn-link btn-sm p-0 text-white"
+                        (click)="startEditingSpeaker(+entry.key, entry.value)"
+                        title="Edit name">
+                        <i class="bi bi-pencil-fill" style="font-size: 0.7rem;"></i>
+                      </button>
+                    </span>
+                  </ng-container>
+                </div>
+              </div>
+
+              <!-- Live Enrollment Transcript -->
+              <div class="transcript-container border rounded p-2 mb-3" style="max-height: 150px; overflow-y: auto;">
+                <div *ngIf="enrollmentSegments().length === 0 && !transcriptionService.currentInterim()" class="text-muted text-center py-2">
+                  <i class="bi bi-mic me-1"></i>
+                  Listening...
+                </div>
+
+                <div *ngFor="let segment of enrollmentSegments()" class="small mb-1">
+                  <span class="badge bg-secondary me-1">Speaker {{ segment.speakerTag }}</span>
+                  {{ segment.transcript }}
+                </div>
+
+                <div *ngIf="transcriptionService.currentInterim() as interim" class="small text-muted fst-italic">
+                  <span class="badge bg-secondary me-1">Speaker {{ interim.speakerTag }}</span>
+                  {{ interim.transcript }}...
+                </div>
+              </div>
+
+              <button class="btn btn-success" (click)="finishEnrollment()">
+                <i class="bi bi-check-lg me-1"></i>
+                Done Enrolling
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Enrollment Complete Badge -->
+        <div *ngIf="enrollmentComplete()" class="card">
+          <div class="card-body">
+            <div class="d-flex align-items-center justify-content-between mb-2">
+              <div class="d-flex align-items-center" [class.text-success]="enrolledSpeakerCount() > 0" [class.text-muted]="enrolledSpeakerCount() === 0">
+                <i class="bi me-2 fs-4" [ngClass]="enrolledSpeakerCount() > 0 ? 'bi-check-circle-fill' : 'bi-person-slash'"></i>
+                <span *ngIf="enrolledSpeakerCount() > 0">{{ enrolledSpeakerCount() }} speaker(s) enrolled</span>
+                <span *ngIf="enrolledSpeakerCount() === 0">Speaker enrollment skipped</span>
+              </div>
+              <button class="btn btn-outline-secondary btn-sm" (click)="restartEnrollment()">
+                <i class="bi bi-arrow-clockwise me-1"></i>
+                Re-enroll
+              </button>
+            </div>
+            <!-- Editable speaker list -->
+            <div class="d-flex flex-wrap gap-2" *ngIf="enrolledSpeakerCount() > 0">
+              <ng-container *ngFor="let entry of speakerMappings() | keyvalue">
+                <!-- Edit mode -->
+                <div *ngIf="editingSpeakerTag() === +entry.key" class="input-group input-group-sm" style="width: auto;">
+                  <input
+                    type="text"
+                    class="form-control form-control-sm"
+                    [(ngModel)]="editingSpeakerName"
+                    (keyup.enter)="saveSpeakerName()"
+                    (keyup.escape)="cancelEditingSpeaker()"
+                    style="width: 120px;"
+                    placeholder="Enter name">
+                  <button class="btn btn-success btn-sm" (click)="saveSpeakerName()" title="Save">
+                    <i class="bi bi-check"></i>
+                  </button>
+                  <button class="btn btn-secondary btn-sm" (click)="cancelEditingSpeaker()" title="Cancel">
+                    <i class="bi bi-x"></i>
+                  </button>
+                </div>
+                <!-- Display mode -->
+                <span
+                  *ngIf="editingSpeakerTag() !== +entry.key"
+                  class="badge d-flex align-items-center gap-1"
+                  [style.background-color]="getSpeakerColor(+entry.key)">
+                  {{ entry.value }}
+                  <button
+                    class="btn btn-link btn-sm p-0 text-white"
+                    (click)="startEditingSpeaker(+entry.key, entry.value)"
+                    title="Edit name">
+                    <i class="bi bi-pencil-fill" style="font-size: 0.7rem;"></i>
+                  </button>
+                </span>
+              </ng-container>
+            </div>
+            <small class="text-muted d-block mt-2" *ngIf="enrolledSpeakerCount() > 0">
+              <i class="bi bi-info-circle me-1"></i>
+              Click on a name to edit it
+            </small>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Column: Recording Controls (before recording) / Left Column (during recording) -->
+      <div [ngClass]="isRecording() || recordingComplete() ? 'col-lg-6' : 'col-lg-6'" class="mb-4">
+        <!-- Recording Controls Card -->
+        <div class="card" *ngIf="!recordingComplete()">
+          <div class="card-header">
+            <h5 class="mb-0">
+              <i class="bi bi-record-circle me-2"></i>
+              Recording Controls
+            </h5>
+          </div>
+          <div class="card-body text-center py-5">
+            <!-- Timer Display -->
+            <div *ngIf="isRecording()" class="mb-4">
+              <div class="recording-indicator mb-3" [class.paused]="isPaused()">
+                <span class="pulse-dot"></span>
+                <span class="status-text ms-2">{{ isPaused() ? 'PAUSED' : 'RECORDING' }}</span>
+              </div>
+
+              <div class="display-3 font-monospace mb-3">{{ formatTime(recordingTime()) }}</div>
+
+              <div class="progress" style="height: 4px;" *ngIf="isRecording() && !isPaused()">
+                <div class="progress-bar progress-bar-striped progress-bar-animated bg-danger" role="progressbar" style="width: 100%"></div>
+              </div>
+            </div>
+
+            <!-- Control Buttons -->
+            <div class="d-flex justify-content-center gap-3 mb-4">
+              <!-- Start Recording -->
+              <button
+                *ngIf="!isRecording()"
+                class="record-btn"
+                [class.disabled]="!meetingTitle.trim()"
+                (click)="startRecording()"
+                [disabled]="!meetingTitle.trim()"
+                title="{{ meetingTitle.trim() ? 'Start Recording' : 'Enter a meeting title first' }}">
+                <div class="record-circle"></div>
+              </button>
+
+              <!-- Pause -->
+              <button
+                *ngIf="isRecording() && !isPaused()"
+                class="btn btn-warning rounded-circle control-btn"
+                (click)="pauseRecording()"
+                title="Pause Recording">
+                <i class="bi bi-pause-fill fs-4"></i>
+              </button>
+
+              <!-- Resume -->
+              <button
+                *ngIf="isRecording() && isPaused()"
+                class="btn btn-success rounded-circle control-btn"
+                (click)="resumeRecording()"
+                title="Resume Recording">
+                <i class="bi bi-play-fill fs-4"></i>
+              </button>
+
+              <!-- Stop -->
+              <button
+                *ngIf="isRecording()"
+                class="btn btn-primary rounded-circle control-btn"
+                (click)="stopRecording()"
+                title="Stop Recording">
+                <i class="bi bi-stop-fill fs-4"></i>
+              </button>
+            </div>
+
+            <!-- Helper Text -->
+            <p class="text-muted mb-3" *ngIf="!isRecording() && meetingTitle.trim()">
+              Click the record button to start recording your meeting
+            </p>
+            <p class="text-warning mb-3" *ngIf="!isRecording() && !meetingTitle.trim()">
+              <i class="bi bi-exclamation-triangle me-1"></i>
+              Enter a meeting title to enable recording
+            </p>
+
+            <!-- Cancel Button -->
+            <button class="btn btn-outline-secondary" (click)="cancel()" *ngIf="!isRecording()">
+              <i class="bi bi-x-circle me-1"></i>
+              Cancel
+            </button>
+          </div>
+        </div>
+
+        <!-- Recording Complete Card -->
+        <div *ngIf="recordingComplete()" class="card">
+          <div class="card-body text-center py-5">
+            <i class="bi bi-check-circle-fill display-1 text-success"></i>
+            <h3 class="mt-3">Recording Complete!</h3>
+            <p class="text-secondary mb-4">Duration: {{ formatTime(recordingTime()) }}</p>
+
+            <!-- Upload Progress -->
+            <div *ngIf="isUploading()" class="mb-4">
+              <div class="d-flex align-items-center justify-content-center mb-3">
+                <div class="spinner-border text-primary me-3" role="status">
+                  <span class="visually-hidden">Uploading...</span>
+                </div>
+                <h5 class="mb-0">Uploading recording...</h5>
+              </div>
+
+              <div *ngIf="uploadProgress()" class="mb-3">
+                <div class="progress" style="height: 25px;">
+                  <div
+                    class="progress-bar progress-bar-striped progress-bar-animated"
+                    role="progressbar"
+                    [style.width.%]="uploadProgress()!.percentage"
+                    [attr.aria-valuenow]="uploadProgress()!.percentage"
+                    aria-valuemin="0"
+                    aria-valuemax="100">
+                    {{ uploadProgress()!.percentage }}%
+                  </div>
+                </div>
+                <p class="text-secondary mt-2 mb-0">
+                  Chunk {{ uploadProgress()!.currentChunk }} of {{ uploadProgress()!.totalChunks }}
+                </p>
+              </div>
+            </div>
+
+            <!-- Upload Error -->
+            <div *ngIf="uploadError()" class="alert alert-danger" role="alert">
+              <i class="bi bi-exclamation-triangle-fill me-2"></i>
+              {{ uploadError() }}
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="d-grid gap-2 col-md-8 mx-auto" *ngIf="!isUploading()">
+              <button class="btn btn-primary btn-lg" (click)="downloadRecording()">
+                <i class="bi bi-download me-2"></i>
+                Download Recording
+              </button>
+              <button class="btn btn-outline-secondary" (click)="startNewRecording()">
+                <i class="bi bi-arrow-clockwise me-2"></i>
+                Start New Recording
+              </button>
+              <button class="btn btn-outline-primary" (click)="goToDashboard()">
+                <i class="bi bi-grid me-2"></i>
+                Go to Dashboard
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Column: Live Transcript (only during recording) -->
+      <div class="col-lg-6" *ngIf="isRecording() || recordingComplete()">
+        <div class="card transcript-card" *ngIf="isRecording() || recordingComplete()">
+          <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">
+              <i class="bi bi-chat-left-text me-2"></i>
+              Live Transcript
+            </h5>
+            <span class="badge bg-success" *ngIf="isRecording() && transcriptionStatus().isTranscribing">
+              <i class="bi bi-broadcast me-1"></i>
+              Live
+            </span>
+          </div>
+          <div class="card-body">
+            <div #transcriptContainer class="transcript-container" style="min-height: 400px; max-height: 60vh; overflow-y: auto;">
+              <div *ngIf="transcriptSegments().length === 0" class="text-muted text-center py-5">
+                <i class="bi bi-mic display-4 mb-3 d-block"></i>
+                Waiting for speech...
+              </div>
+
+              <div *ngFor="let segment of transcriptSegments(); let i = index" class="transcript-segment mb-3">
+                <div class="d-flex align-items-start">
+                  <!-- Only show speaker badge for final segments (interim speaker detection is unreliable) -->
+                  <span
+                    *ngIf="segment.isFinal"
+                    class="speaker-badge badge me-2"
+                    [style.background-color]="getSpeakerColor(segment.speakerTag)">
+                    {{ segment.speakerName || getSpeakerLabel(segment.speakerTag) }}
+                  </span>
+                  <span
+                    *ngIf="!segment.isFinal"
+                    class="speaker-badge badge me-2 bg-secondary">
+                    <i class="bi bi-mic-fill"></i>
+                  </span>
+                  <span
+                    class="transcript-text"
+                    [class.text-muted]="!segment.isFinal"
+                    [class.fst-italic]="!segment.isFinal">
+                    {{ segment.transcript }}
+                    <span *ngIf="!segment.isFinal" class="typing-indicator">...</span>
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Transcription Status -->
+            <div class="mt-2 text-muted small" *ngIf="transcriptionStatus().error">
+              <span class="text-danger">
+                <i class="bi bi-exclamation-triangle me-1"></i>
+                {{ transcriptionStatus().error }}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Transcription Disabled/Unavailable Message -->
+        <div *ngIf="isRecording() && !transcriptionStatus().isTranscribing && enableTranscription()" class="card">
+          <div class="card-body">
+            <div class="alert alert-warning mb-0 d-flex align-items-center" role="alert">
+              <i class="bi bi-exclamation-triangle-fill me-2"></i>
+              <div>
+                Live transcription is not available. Recording will continue without transcription.
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

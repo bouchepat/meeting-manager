@@ -1,0 +1,488 @@
+<div class="container py-4">
+  <!-- Loading State -->
+  <div *ngIf="isLoading()" class="text-center py-5">
+    <div class="spinner-border text-primary" role="status">
+      <span class="visually-hidden">Loading...</span>
+    </div>
+    <p class="mt-3 text-muted">Loading meeting details...</p>
+  </div>
+
+  <!-- Error State -->
+  <div *ngIf="error()" class="alert alert-danger" role="alert">
+    <i class="bi bi-exclamation-triangle-fill me-2"></i>
+    {{ error() }}
+    <button class="btn btn-outline-danger btn-sm ms-3" (click)="goBack()">
+      Go Back
+    </button>
+  </div>
+
+  <!-- Meeting Content -->
+  <div *ngIf="!isLoading() && !error() && meeting() as m">
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-start mb-4">
+      <div>
+        <button class="btn btn-link text-muted p-0 mb-2" (click)="goBack()">
+          <i class="bi bi-arrow-left me-1"></i> Back to Dashboard
+        </button>
+        <h2 class="mb-1">{{ m.title }}</h2>
+        <div class="d-flex align-items-center gap-3">
+          <span class="badge" [ngClass]="getStatusBadgeClass(m.status)">
+            {{ m.status | titlecase }}
+          </span>
+          <span class="text-muted">
+            <i class="bi bi-calendar me-1"></i>
+            {{ formatDate(m.createdAt) }}
+          </span>
+          <span *ngIf="m.recordingDuration" class="text-muted">
+            <i class="bi bi-clock me-1"></i>
+            {{ formatDuration(m.recordingDuration) }}
+          </span>
+        </div>
+      </div>
+      <button class="btn btn-outline-danger" (click)="deleteMeeting()">
+        <i class="bi bi-trash me-1"></i> Delete
+      </button>
+    </div>
+
+    <!-- Tabs -->
+    <ul class="nav nav-tabs mb-4">
+      <li class="nav-item">
+        <button
+          class="nav-link"
+          [class.active]="activeTab() === 'details'"
+          (click)="setActiveTab('details')">
+          <i class="bi bi-info-circle me-1"></i>
+          Details
+        </button>
+      </li>
+      <li class="nav-item">
+        <button
+          class="nav-link"
+          [class.active]="activeTab() === 'transcript'"
+          (click)="setActiveTab('transcript')">
+          <i class="bi bi-chat-left-text me-1"></i>
+          Transcript
+          <span *ngIf="transcriptSegments().length > 0" class="badge bg-primary ms-1">
+            {{ transcriptSegments().length }}
+          </span>
+        </button>
+      </li>
+    </ul>
+
+    <!-- Details Tab -->
+    <div *ngIf="activeTab() === 'details'">
+      <div class="row">
+        <div class="col-lg-8">
+          <!-- Description -->
+          <div class="card mb-4">
+            <div class="card-header">
+              <h5 class="mb-0">
+                <i class="bi bi-card-text me-2"></i>
+                Description
+              </h5>
+            </div>
+            <div class="card-body">
+              <p *ngIf="m.description" class="mb-0">{{ m.description }}</p>
+              <p *ngIf="!m.description" class="text-muted mb-0 fst-italic">No description provided</p>
+            </div>
+          </div>
+
+          <!-- AI Summary -->
+          <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+              <h5 class="mb-0">
+                <i class="bi bi-robot me-2"></i>
+                AI Summary
+              </h5>
+              <button
+                *ngIf="!aiSummary() && transcriptSegments().length > 0"
+                class="btn btn-primary btn-sm"
+                (click)="generateSummary()"
+                [disabled]="isGeneratingSummary()">
+                <span *ngIf="isGeneratingSummary()" class="spinner-border spinner-border-sm me-1"></span>
+                <i *ngIf="!isGeneratingSummary()" class="bi bi-magic me-1"></i>
+                {{ isGeneratingSummary() ? 'Generating...' : 'Generate Summary' }}
+              </button>
+              <button
+                *ngIf="aiSummary()"
+                class="btn btn-outline-primary btn-sm"
+                (click)="generateSummary()"
+                [disabled]="isGeneratingSummary()">
+                <span *ngIf="isGeneratingSummary()" class="spinner-border spinner-border-sm me-1"></span>
+                <i *ngIf="!isGeneratingSummary()" class="bi bi-arrow-clockwise me-1"></i>
+                {{ isGeneratingSummary() ? 'Regenerating...' : 'Regenerate' }}
+              </button>
+            </div>
+            <div class="card-body">
+              <!-- No summary yet -->
+              <div *ngIf="!aiSummary() && !isGeneratingSummary()" class="text-center text-muted py-4">
+                <i class="bi bi-robot display-4"></i>
+                <p class="mt-3 mb-0">No AI summary available</p>
+                <p *ngIf="transcriptSegments().length === 0" class="small">
+                  A transcript is required to generate a summary
+                </p>
+                <p *ngIf="transcriptSegments().length > 0" class="small">
+                  Click "Generate Summary" to create an AI-powered summary
+                </p>
+              </div>
+
+              <!-- Generating spinner -->
+              <div *ngIf="isGeneratingSummary() && !aiSummary()" class="text-center py-4">
+                <div class="spinner-border text-primary" role="status">
+                  <span class="visually-hidden">Generating...</span>
+                </div>
+                <p class="mt-3 mb-0 text-muted">Analyzing transcript and generating summary...</p>
+              </div>
+
+              <!-- Summary content -->
+              <div *ngIf="aiSummary() as summary">
+                <!-- Executive Summary -->
+                <div class="mb-4">
+                  <h6 class="text-primary fw-bold">
+                    <i class="bi bi-file-text me-1"></i>
+                    Executive Summary
+                  </h6>
+                  <p class="mb-0">{{ summary.summary }}</p>
+                </div>
+
+                <!-- Key Points -->
+                <div *ngIf="summary.keyPoints && summary.keyPoints.length > 0" class="mb-4">
+                  <h6 class="text-primary fw-bold">
+                    <i class="bi bi-list-check me-1"></i>
+                    Key Points
+                  </h6>
+                  <ul class="mb-0">
+                    <li *ngFor="let point of summary.keyPoints">{{ point }}</li>
+                  </ul>
+                </div>
+
+                <!-- Decisions -->
+                <div *ngIf="summary.decisions && summary.decisions.length > 0" class="mb-4">
+                  <h6 class="text-primary fw-bold">
+                    <i class="bi bi-check-circle me-1"></i>
+                    Decisions Made
+                  </h6>
+                  <ul class="mb-0">
+                    <li *ngFor="let decision of summary.decisions">{{ decision }}</li>
+                  </ul>
+                </div>
+
+                <!-- Action Items -->
+                <div *ngIf="summary.actionItems && summary.actionItems.length > 0" class="mb-3">
+                  <h6 class="text-primary fw-bold">
+                    <i class="bi bi-list-task me-1"></i>
+                    Action Items
+                  </h6>
+                  <ul class="mb-0">
+                    <li *ngFor="let item of summary.actionItems">{{ item }}</li>
+                  </ul>
+                </div>
+
+                <!-- AI badge -->
+                <div class="text-end">
+                  <span *ngIf="summary.isAiGenerated" class="badge bg-info">
+                    <i class="bi bi-robot me-1"></i>
+                    AI Generated
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Audio Player -->
+          <div class="card mb-4" *ngIf="audioUrl()">
+            <div class="card-header">
+              <h5 class="mb-0">
+                <i class="bi bi-play-circle me-2"></i>
+                Recording
+              </h5>
+            </div>
+            <div class="card-body">
+              <div class="audio-player-light">
+                <audio controls [src]="audioUrl()">
+                  Your browser does not support the audio element.
+                </audio>
+              </div>
+              <div class="mt-3 d-flex gap-2">
+                <a [href]="audioUrl()" download class="btn btn-outline-primary btn-sm">
+                  <i class="bi bi-download me-1"></i>
+                  Download Recording
+                </a>
+              </div>
+            </div>
+          </div>
+
+          <div class="card mb-4" *ngIf="!audioUrl()">
+            <div class="card-header">
+              <h5 class="mb-0">
+                <i class="bi bi-play-circle me-2"></i>
+                Recording
+              </h5>
+            </div>
+            <div class="card-body text-center text-muted py-4">
+              <i class="bi bi-mic-mute display-4"></i>
+              <p class="mt-2 mb-0">No recording available</p>
+            </div>
+          </div>
+
+          <!-- Tasks Section -->
+          <div class="card mb-4">
+            <div class="card-header d-flex justify-content-between align-items-center">
+              <h5 class="mb-0">
+                <i class="bi bi-list-task me-2"></i>
+                Tasks
+              </h5>
+              <span class="badge bg-primary" *ngIf="tasks().length > 0">
+                {{ tasks().length }}
+              </span>
+            </div>
+            <div class="card-body">
+              <!-- No tasks -->
+              <div *ngIf="tasks().length === 0" class="text-center text-muted py-4">
+                <i class="bi bi-clipboard-check display-4"></i>
+                <p class="mt-3 mb-0">No tasks for this meeting</p>
+                <p class="small">Tasks can be auto-generated when you create an AI summary</p>
+              </div>
+
+              <!-- Task list -->
+              <div *ngIf="tasks().length > 0" class="task-list">
+                <div *ngFor="let task of tasks()" class="task-item card mb-2" [class.border-danger]="isTaskOverdue(task)">
+                  <div class="card-body py-2 px-3">
+                    <div class="d-flex align-items-start justify-content-between">
+                      <div class="flex-grow-1">
+                        <div class="d-flex align-items-center gap-2 mb-1">
+                          <span class="badge" [ngClass]="getTaskStatusBadgeClass(task.status)">
+                            {{ task.status === 'in_progress' ? 'In Progress' : (task.status | titlecase) }}
+                          </span>
+                          <span class="badge" [ngClass]="getTaskPriorityBadgeClass(task.priority)">
+                            {{ task.priority | titlecase }}
+                          </span>
+                          <span *ngIf="task.isAiGenerated" class="badge bg-info" title="AI Generated">
+                            <i class="bi bi-robot"></i>
+                          </span>
+                        </div>
+                        <h6 class="mb-1">{{ task.title }}</h6>
+                        <p *ngIf="task.description" class="text-muted small mb-1">{{ task.description }}</p>
+                        <div class="d-flex align-items-center gap-3 text-muted small">
+                          <span *ngIf="task.assignee">
+                            <i class="bi bi-person me-1"></i>
+                            {{ task.assignee.displayName || 'Unassigned' }}
+                          </span>
+                          <span *ngIf="task.dueDate" [class.text-danger]="isTaskOverdue(task)">
+                            <i class="bi bi-calendar me-1"></i>
+                            {{ formatTaskDueDate(task.dueDate) }}
+                            <span *ngIf="isTaskOverdue(task)">(Overdue)</span>
+                          </span>
+                        </div>
+                      </div>
+                      <div class="d-flex gap-1">
+                        <!-- Assignee dropdown -->
+                        <div ngbDropdown class="d-inline-block">
+                          <button class="btn btn-sm btn-outline-secondary" ngbDropdownToggle title="Assign to user">
+                            <i class="bi bi-person"></i>
+                          </button>
+                          <div ngbDropdownMenu class="dropdown-menu-end" style="max-height: 300px; overflow-y: auto;">
+                            <h6 class="dropdown-header">Assign To</h6>
+                            <button ngbDropdownItem [class.active]="!task.assigneeId" (click)="updateTaskAssignee(task, null)">
+                              <i class="bi bi-person-dash me-2"></i> Unassigned
+                            </button>
+                            <div class="dropdown-divider"></div>
+                            <button ngbDropdownItem *ngFor="let user of users()" [class.active]="task.assigneeId === user.id" (click)="updateTaskAssignee(task, user.id)">
+                              <i class="bi bi-person-fill me-2"></i> {{ user.displayName }}
+                            </button>
+                          </div>
+                        </div>
+                        <!-- Status dropdown -->
+                        <div ngbDropdown class="d-inline-block">
+                          <button class="btn btn-sm btn-outline-secondary" ngbDropdownToggle title="Change status">
+                            <i class="bi bi-arrow-repeat"></i>
+                          </button>
+                          <div ngbDropdownMenu class="dropdown-menu-end">
+                            <h6 class="dropdown-header">Change Status</h6>
+                            <button ngbDropdownItem [class.active]="task.status === TaskStatus.TODO" (click)="updateTaskStatus(task, TaskStatus.TODO)">
+                              <i class="bi bi-circle me-2"></i> To Do
+                            </button>
+                            <button ngbDropdownItem [class.active]="task.status === TaskStatus.IN_PROGRESS" (click)="updateTaskStatus(task, TaskStatus.IN_PROGRESS)">
+                              <i class="bi bi-play-circle me-2"></i> In Progress
+                            </button>
+                            <button ngbDropdownItem [class.active]="task.status === TaskStatus.DONE" (click)="updateTaskStatus(task, TaskStatus.DONE)">
+                              <i class="bi bi-check-circle me-2"></i> Done
+                            </button>
+                          </div>
+                        </div>
+                        <!-- Delete button -->
+                        <button class="btn btn-sm btn-outline-danger" (click)="deleteTask(task)" title="Delete task">
+                          <i class="bi bi-trash"></i>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-lg-4">
+          <!-- Meeting Info -->
+          <div class="card">
+            <div class="card-header">
+              <h5 class="mb-0">
+                <i class="bi bi-info-circle me-2"></i>
+                Meeting Info
+              </h5>
+            </div>
+            <ul class="list-group list-group-flush">
+              <li class="list-group-item d-flex justify-content-between">
+                <span class="text-muted">Status</span>
+                <span class="badge" [ngClass]="getStatusBadgeClass(m.status)">
+                  {{ m.status | titlecase }}
+                </span>
+              </li>
+              <li class="list-group-item d-flex justify-content-between">
+                <span class="text-muted">Created</span>
+                <span>{{ formatDate(m.createdAt) }}</span>
+              </li>
+              <li *ngIf="m.startedAt" class="list-group-item d-flex justify-content-between">
+                <span class="text-muted">Started</span>
+                <span>{{ formatDate(m.startedAt) }}</span>
+              </li>
+              <li *ngIf="m.endedAt" class="list-group-item d-flex justify-content-between">
+                <span class="text-muted">Ended</span>
+                <span>{{ formatDate(m.endedAt) }}</span>
+              </li>
+              <li *ngIf="m.recordingDuration" class="list-group-item d-flex justify-content-between">
+                <span class="text-muted">Duration</span>
+                <span>{{ formatDuration(m.recordingDuration) }}</span>
+              </li>
+              <li class="list-group-item d-flex justify-content-between">
+                <span class="text-muted">Creator</span>
+                <span>{{ m.creator.displayName || 'Unknown' }}</span>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Transcript Tab -->
+    <div *ngIf="activeTab() === 'transcript'">
+      <div class="row">
+        <div class="col-lg-8">
+          <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+              <h5 class="mb-0">
+                <i class="bi bi-chat-left-text me-2"></i>
+                Transcript
+              </h5>
+              <span class="text-muted">{{ transcriptSegments().length }} segment(s)</span>
+            </div>
+            <div class="card-body">
+              <!-- No transcript -->
+              <div *ngIf="transcriptSegments().length === 0" class="text-center text-muted py-5">
+                <i class="bi bi-chat-left display-4"></i>
+                <p class="mt-3 mb-0">No transcript available for this meeting</p>
+                <p class="small">Transcripts are generated during live recording with transcription enabled</p>
+              </div>
+
+              <!-- Transcript segments -->
+              <div *ngIf="transcriptSegments().length > 0" class="transcript-container">
+                <div *ngFor="let segment of transcriptSegments(); let i = index" class="transcript-segment mb-3">
+                  <div class="d-flex align-items-start">
+                    <span
+                      class="speaker-badge badge me-2 cursor-pointer"
+                      [style.background-color]="getSpeakerColor(segment.speakerTag)"
+                      (click)="startEditingSpeaker(segment.speakerTag)"
+                      title="Click to rename speaker">
+                      {{ getSpeakerName(segment.speakerTag) }}
+                    </span>
+                    <div class="flex-grow-1">
+                      <span class="transcript-text">{{ segment.transcript }}</span>
+                      <div class="text-muted small mt-1">
+                        <i class="bi bi-clock me-1"></i>
+                        {{ formatTime(segment.startTime) }} - {{ formatTime(segment.endTime) }}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Speaker Labels Sidebar -->
+        <div class="col-lg-4">
+          <div class="card">
+            <div class="card-header">
+              <h5 class="mb-0">
+                <i class="bi bi-people me-2"></i>
+                Speakers
+              </h5>
+            </div>
+            <div class="card-body">
+              <div *ngIf="uniqueSpeakers().length === 0" class="text-center text-muted py-3">
+                <p class="mb-0 small">No speakers detected</p>
+              </div>
+
+              <div *ngFor="let speakerTag of uniqueSpeakers()" class="speaker-item mb-3">
+                <!-- Display mode -->
+                <div *ngIf="editingSpeaker() !== speakerTag" class="d-flex align-items-center justify-content-between">
+                  <div class="d-flex align-items-center">
+                    <span
+                      class="speaker-dot me-2"
+                      [style.background-color]="getSpeakerColor(speakerTag)">
+                    </span>
+                    <span>{{ getSpeakerName(speakerTag) }}</span>
+                  </div>
+                  <button
+                    class="btn btn-sm btn-outline-secondary"
+                    (click)="startEditingSpeaker(speakerTag)"
+                    title="Edit speaker name">
+                    <i class="bi bi-pencil"></i>
+                  </button>
+                </div>
+
+                <!-- Edit mode -->
+                <div *ngIf="editingSpeaker() === speakerTag">
+                  <div class="input-group input-group-sm">
+                    <span class="input-group-text">
+                      <span
+                        class="speaker-dot-small"
+                        [style.background-color]="getSpeakerColor(speakerTag)">
+                      </span>
+                    </span>
+                    <input
+                      type="text"
+                      class="form-control"
+                      [(ngModel)]="editingSpeakerName"
+                      placeholder="Enter name"
+                      (keyup.enter)="saveSpeakerName(speakerTag)"
+                      (keyup.escape)="cancelEditingSpeaker()">
+                    <button
+                      class="btn btn-success"
+                      (click)="saveSpeakerName(speakerTag)"
+                      title="Save">
+                      <i class="bi bi-check"></i>
+                    </button>
+                    <button
+                      class="btn btn-outline-secondary"
+                      (click)="cancelEditingSpeaker()"
+                      title="Cancel">
+                      <i class="bi bi-x"></i>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <hr *ngIf="uniqueSpeakers().length > 0">
+              <p class="text-muted small mb-0">
+                <i class="bi bi-info-circle me-1"></i>
+                Click on a speaker badge or use the edit button to rename speakers
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

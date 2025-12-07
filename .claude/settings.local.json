@@ -1,0 +1,29 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx -p @angular/cli ng:*)",
+      "Bash(npx:*)",
+      "Bash(npm install:*)",
+      "Bash(docker-compose logs:*)",
+      "Bash(docker-compose restart:*)",
+      "Bash(docker-compose exec:*)",
+      "Bash(docker-compose down:*)",
+      "Bash(test:*)",
+      "Bash(docker-compose up:*)",
+      "Bash(docker-compose ps:*)",
+      "Bash(docker-compose build:*)",
+      "Bash(mkdir:*)",
+      "Bash(chmod:*)",
+      "Bash(migrationsrun_migrations.bat reset)",
+      "Bash(./migrations/run_migrations.bat reset)",
+      "Bash(docker exec:*)",
+      "Bash(docker cp:*)",
+      "Bash(cat:*)",
+      "Bash(migrations/schema/002_test.sql)",
+      "Bash(./migrations/run_migrations.bat migrate)",
+      "Bash(docker inspect:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

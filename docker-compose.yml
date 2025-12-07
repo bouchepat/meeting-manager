@@ -1,0 +1,121 @@
+version: '3.8'
+
+services:
+  # MySQL Database
+  mysql:
+    image: mysql:8.0
+    container_name: meeting-manager-db
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${DATABASE_ROOT_PASSWORD-}
+      MYSQL_DATABASE: ${DATABASE_NAME:-}
+      MYSQL_USER: ${DATABASE_USER-}
+      MYSQL_PASSWORD: ${DATABASE_PASSWORD:-}
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      # All SQL files run in alphabetical order on fresh init
+      # Schema: 001-099, Seeds: 100+
+      - ./migrations/schema:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: [ "CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - meeting-manager-network
+
+  # Backend API
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: development
+    container_name: meeting-manager-backend
+    restart: unless-stopped
+    environment:
+      DATABASE_HOST: ${DATABASE_HOST:-}
+      DATABASE_PORT: ${DATABASE_PORT:-}
+      DATABASE_USER: ${DATABASE_USER:-}
+      DATABASE_PASSWORD: ${DATABASE_PASSWORD:-}
+      DATABASE_NAME: ${DATABASE_NAME:-}
+      JWT_SECRET: ${JWT_SECRET:-}
+      PORT: ${PORT:-}
+      NODE_ENV: ${NODE_ENV:-}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      DEEPGRAM_API_KEY: ${DEEPGRAM_API_KEY:-}
+      DIARIZATION_SERVICE_URL: http://diarization:5000
+      GOOGLE_APPLICATION_CREDENTIALS: /app/google-credentials.json
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+      - ../manager-uploads:/app/uploads
+      - ./google-credentials.json:/app/google-credentials.json:ro
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - meeting-manager-network
+    command: sh -c "sleep 10 && npm run start:dev"
+
+  # Frontend
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: development
+    container_name: meeting-manager-frontend
+    restart: unless-stopped
+    environment:
+      NODE_ENV: ${NODE_ENV:-}
+    ports:
+      - "4200:4200"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    depends_on:
+      - backend
+    networks:
+      - meeting-manager-network
+    stdin_open: true
+    tty: true
+
+  # Speaker Diarization Service (pyannote)
+  diarization:
+    build:
+      context: ./diarization
+      dockerfile: Dockerfile
+    container_name: meeting-manager-diarization
+    restart: unless-stopped
+    environment:
+      HUGGINGFACE_TOKEN: ${HUGGINGFACE_TOKEN:-}
+      PORT: 5000
+    ports:
+      - "5000:5000"
+    volumes:
+      - ../manager-uploads:/app/uploads
+      - hf_cache:/root/.cache/huggingface
+      - ./diarization/app.py:/app/app.py:ro
+    networks:
+      - meeting-manager-network
+    # GPU support for NVIDIA
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [ gpu ]
+
+volumes:
+  mysql_data:
+    driver: local
+  hf_cache:
+    driver: local
+
+networks:
+  meeting-manager-network:
+    driver: bridge

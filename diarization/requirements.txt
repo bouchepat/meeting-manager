@@ -1,0 +1,11 @@
+# PyTorch is installed separately in Dockerfile to prevent version override
+# DO NOT add torch or torchaudio here - they're installed first in Dockerfile
+
+# pyannote.audio 4.x - uses new 'token' parameter compatible with huggingface_hub 1.x
+pyannote.audio>=4.0.0
+soundfile>=0.12.0
+
+# Flask and utilities
+flask==3.0.0
+gunicorn==21.2.0
+python-dotenv>=1.0.0

@@ -1,0 +1,68 @@
+<div class="home-container">
+  <header class="hero">
+    <div class="hero-content">
+      <h1>AI-Powered Meeting Manager</h1>
+      <p class="subtitle">Record meetings, get AI-generated summaries, and track tasks effortlessly</p>
+      @if (user$ | async; as user) {
+        <a class="cta-button" routerLink="/dashboard">Go to Dashboard</a>
+      } @else {
+        <button class="cta-button" (click)="signIn()">
+          <i class="bi bi-google me-2"></i>
+          Sign in with Google
+        </button>
+      }
+    </div>
+  </header>
+
+  <section class="features">
+    <div class="feature-card">
+      <div class="feature-icon">🎙️</div>
+      <h3>Record Meetings</h3>
+      <p>Easily record your meetings with a single click and store them securely</p>
+    </div>
+
+    <div class="feature-card">
+      <div class="feature-icon">🤖</div>
+      <h3>AI-Powered Analysis</h3>
+      <p>Automatically detect participants and generate comprehensive meeting summaries</p>
+    </div>
+
+    <div class="feature-card">
+      <div class="feature-icon">✅</div>
+      <h3>Task Management</h3>
+      <p>Create and assign tasks directly from meeting discussions with Trello-like boards</p>
+    </div>
+
+    <div class="feature-card">
+      <div class="feature-icon">📊</div>
+      <h3>Smart Insights</h3>
+      <p>Get key points, decisions, and action items extracted automatically</p>
+    </div>
+  </section>
+
+  <section class="how-it-works">
+    <h2>How It Works</h2>
+    <div class="steps">
+      <div class="step">
+        <div class="step-number">1</div>
+        <h4>Create a Meeting</h4>
+        <p>Log in and start a new meeting session</p>
+      </div>
+      <div class="step">
+        <div class="step-number">2</div>
+        <h4>Record</h4>
+        <p>Record your meeting with our easy-to-use interface</p>
+      </div>
+      <div class="step">
+        <div class="step-number">3</div>
+        <h4>AI Processing</h4>
+        <p>Our AI analyzes the recording and extracts key information</p>
+      </div>
+      <div class="step">
+        <div class="step-number">4</div>
+        <h4>Review & Act</h4>
+        <p>Review summaries and manage tasks</p>
+      </div>
+    </div>
+  </section>
+</div>
