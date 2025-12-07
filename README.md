@@ -1,331 +1,275 @@
 # AI-Powered Meeting Manager
 
-A full-stack application for recording meetings, generating AI-powered summaries, detecting participants, and managing tasks with a Trello-like interface.
+A full-stack application for recording meetings, generating AI-powered summaries, real-time transcription with speaker diarization, and task management.
 
 ## Tech Stack
 
-### Frontend
+### Frontend (Port 4200)
 - **Angular 21** - Modern web framework
+- **Bootstrap 5.3** - UI components with Bootstrap Icons
 - **Firebase Authentication** - Google sign-in
-- **Angular Material** - UI components
-- **RxJS** - Reactive programming
 - **TypeScript** - Type-safe development
 
-### Backend
-- **NestJS** - Progressive Node.js framework
+### Backend (Port 3000)
+- **NestJS 11** - Progressive Node.js framework
 - **TypeORM** - Database ORM
-- **MySQL** - Relational database
-- **Class Validator** - DTO validation
+- **MySQL 8.0** - Relational database
+- **FFmpeg** - Audio conversion (WebM to M4A)
+- **Firebase Admin SDK** - Token verification
+- **Passport JWT** - API authentication
 
-## Project Structure
-
-```
-manager/
-├── frontend/           # Angular application
-│   ├── src/
-│   │   ├── app/
-│   │   │   ├── components/    # UI components
-│   │   │   ├── services/      # Business logic services
-│   │   │   ├── models/        # TypeScript interfaces
-│   │   │   └── ...
-│   │   ├── environments/      # Environment configs
-│   │   └── styles.scss        # Global styles with theme support
-│   └── package.json
-│
-└── backend/            # NestJS application
-    ├── src/
-    │   ├── entities/          # TypeORM entities
-    │   ├── users/             # User module
-    │   ├── meetings/          # Meetings module
-    │   ├── tasks/             # Tasks module
-    │   └── ...
-    ├── .env                   # Environment variables
-    └── package.json
-```
+### AI/ML Services
+- **Google Cloud Speech-to-Text** - Real-time transcription
+- **Pyannote.audio** - Speaker diarization (GPU-accelerated)
+- **OpenAI GPT-4** - Meeting summarization & action item extraction
 
 ## Features
 
 ### Implemented
-- ✅ User authentication with Firebase (Google sign-in)
-- ✅ Light/Dark theme toggle
-- ✅ Modern, responsive home page
-- ✅ Database schema for:
-  - Users
-  - Meetings
-  - Guests
-  - Tasks
-  - Meeting summaries
-- ✅ RESTful API endpoints for all resources
-- ✅ TypeORM integration with MySQL
-- ✅ Full CRUD operations for meetings and tasks
+- **Authentication**
+  - Firebase Google sign-in
+  - JWT token-based API authentication
+  - Automatic token refresh
+
+- **Meeting Recording**
+  - Browser-based audio recording (MediaRecorder API)
+  - Pause/resume functionality
+  - Chunked upload for large files (5MB chunks)
+  - Automatic WebM to M4A conversion (FFmpeg)
+  - Recording timer and progress tracking
+
+- **Real-time Transcription**
+  - WebSocket-based audio streaming
+  - Google Cloud Speech-to-Text integration
+  - Live transcript display during recording
+  - Automatic stream restart on 5-minute limit
+
+- **Speaker Diarization**
+  - Pyannote.audio 4.x with GPU support (NVIDIA CUDA)
+  - Post-processing speaker assignment
+  - Consecutive segment merging by speaker
+  - Speaker enrollment with name extraction
+  - Support for spelled names (e.g., "J-O-H-N", NATO alphabet)
+
+- **AI Summarization**
+  - OpenAI GPT-4 integration
+  - Automatic summary generation
+  - Action items extraction (auto-creates tasks)
+  - Key decisions identification
+
+- **Dashboard**
+  - Meeting list with status indicators
+  - Recording duration display
+  - Responsive grid layout
+  - Quick access to recordings and details
+
+- **Task Management**
+  - AI-generated tasks from transcripts
+  - Status tracking (todo, in_progress, done)
+  - Task assignment to users
+  - Meeting-linked tasks
+
+- **Theme Support**
+  - Light/Dark mode toggle
+  - System preference detection
+  - Persisted in localStorage
 
 ### Database Schema
+- **users** - Firebase-authenticated users
+- **meetings** - Meeting records with recordings
+- **guests** - Meeting participants
+- **tasks** - Task management with AI generation
+- **meeting_summaries** - AI-generated summaries
+- **transcript_segments** - Real-time transcripts with speaker tags
+- **speaker_mappings** - Speaker name assignments
 
-**Users**
-- id, email, displayName, photoURL, firebaseUid
-- Relations: createdMeetings, assignedTasks
-
-**Meetings**
-- id, title, description, status, recordingUrl, recordingDuration
-- startedAt, endedAt, creatorId
-- Relations: creator, guests, tasks, summaries
-
-**Guests**
-- id, name, email, role, isAiDetected
-- Relations: meeting
-
-**Tasks**
-- id, title, description, status, priority, dueDate
-- isAiGenerated, meetingId, assigneeId
-- Relations: meeting, assignee
-
-**MeetingSummary**
-- id, summary, keyPoints, decisions, actionItems
-- isAiGenerated, meetingId
-- Relations: meeting
-
-## Quick Start with Docker 🐳 (Recommended)
-
-The easiest way to run the entire stack is using Docker Compose. **New to the project? See [QUICK-START.md](QUICK-START.md) for a step-by-step guide!**
-
-### Using Docker Compose Directly
-
-```bash
-# Start all services (MySQL, Backend, Frontend)
-docker-compose up
-```
-
-### Using Helper Scripts
-
-We've included convenient scripts for managing Docker:
-
-**Windows (PowerShell):**
-```powershell
-.\docker.ps1 up        # Start services
-.\docker.ps1 dev       # Start in background
-.\docker.ps1 logs      # View logs
-.\docker.ps1 help      # See all commands
-```
-
-**Windows (CMD):**
-```cmd
-docker.bat up          # Start services
-docker.bat help        # See all commands
-```
-
-**Linux/Mac:**
-```bash
-make up                # Start services
-make dev               # Start in background
-make logs              # View logs
-make help              # See all commands
-```
-
-### Access the Application
-
-- **Frontend**: http://localhost:4200
-- **Backend API**: http://localhost:3000/api
-- **Database**: localhost:3306 (user: `meetinguser`, password: `meetingpass`)
-
-**Important**: Before running, update `frontend/src/environments/environment.ts` with your Firebase credentials.
-
-### Documentation
-
-- 🚀 **New Users**: [QUICK-START.md](QUICK-START.md) - Get running in 5 minutes
-- 🐳 **Docker Details**: [DOCKER-SETUP.md](DOCKER-SETUP.md) - Full Docker documentation
-- 📖 **Full Documentation**: See below for manual setup and API reference
-
----
-
-## Manual Setup (Without Docker)
+## Quick Start with Docker
 
 ### Prerequisites
-- Node.js (v18 or higher)
-- MySQL Server
-- Firebase project (for authentication)
+- Docker & Docker Compose
+- NVIDIA GPU with CUDA (for speaker diarization)
+- Google Cloud credentials (Speech-to-Text API)
+- Firebase project
+- OpenAI API key (for summarization)
 
-### 1. Database Setup
+### 1. Clone and Configure
 
-Create a MySQL database:
-```sql
-CREATE DATABASE meeting_manager;
-```
-
-### 2. Backend Setup
-
-1. Navigate to the backend directory:
 ```bash
-cd backend
+git clone git@github.com:bouchepat/meeting-manager.git
+cd meeting-manager
 ```
 
-2. Install dependencies:
-```bash
-npm install
-```
+### 2. Set Up Environment Files
 
-3. Update `.env` file with your credentials:
+**Backend** (`backend/.env`):
 ```env
-DATABASE_HOST=localhost
+DATABASE_HOST=mysql
 DATABASE_PORT=3306
-DATABASE_USER=root
-DATABASE_PASSWORD=your_password
+DATABASE_USER=meetinguser
+DATABASE_PASSWORD=meetingpass
 DATABASE_NAME=meeting_manager
-JWT_SECRET=your-secret-key
-PORT=3000
+JWT_SECRET=your-secret-key-change-in-production
+OPENAI_API_KEY=your-openai-api-key
 ```
 
-4. Start the backend server:
-```bash
-npm run start:dev
-```
-
-The backend will run on `http://localhost:3000` and automatically create database tables.
-
-### 3. Frontend Setup
-
-1. Navigate to the frontend directory:
-```bash
-cd frontend
-```
-
-2. Install dependencies:
-```bash
-npm install
-```
-
-3. Configure Firebase:
-   - Go to [Firebase Console](https://console.firebase.google.com/)
-   - Create a new project
-   - Enable Google authentication
-   - Get your Firebase config
-
-4. Update `frontend/src/environments/environment.ts`:
+**Frontend** (`frontend/src/environments/environment.local.ts`):
 ```typescript
 export const environment = {
   production: false,
   firebase: {
-    apiKey: 'YOUR_FIREBASE_API_KEY',
-    authDomain: 'YOUR_PROJECT_ID.firebaseapp.com',
-    projectId: 'YOUR_PROJECT_ID',
-    storageBucket: 'YOUR_PROJECT_ID.appspot.com',
-    messagingSenderId: 'YOUR_MESSAGING_SENDER_ID',
-    appId: 'YOUR_APP_ID'
+    apiKey: "YOUR_FIREBASE_API_KEY",
+    authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
+    projectId: "YOUR_PROJECT_ID",
+    storageBucket: "YOUR_PROJECT_ID.firebasestorage.app",
+    messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+    appId: "YOUR_APP_ID",
+    measurementId: "YOUR_MEASUREMENT_ID"
   },
   apiUrl: 'http://localhost:3000/api'
 };
 ```
 
-5. Start the development server:
+**Google Cloud credentials** (`backend/google-credentials.json`):
+- Create a service account with "Cloud Speech Client" role
+- Download the JSON key file
+
+**Diarization** (`.env` in project root):
+```env
+HUGGINGFACE_TOKEN=your-huggingface-token
+```
+Note: Accept pyannote model license at https://huggingface.co/pyannote/speaker-diarization-3.1
+
+### 3. Start Services
+
 ```bash
-npm start
+docker-compose up -d
 ```
 
-The frontend will run on `http://localhost:4200`
+### 4. Access the Application
+
+- **Frontend**: http://localhost:4200
+- **Backend API**: http://localhost:3000/api
+- **Database**: localhost:3306
+
+## Docker Services
+
+| Service | Port | Description |
+|---------|------|-------------|
+| frontend | 4200 | Angular dev server with hot-reload |
+| backend | 3000 | NestJS API with hot-reload |
+| mysql | 3306 | MySQL 8.0 database |
+| diarization | 5000 | Pyannote speaker diarization (GPU) |
+
+### Common Commands
+
+```bash
+# Start all services
+docker-compose up -d
+
+# View logs
+docker-compose logs -f [service-name]
+
+# Restart a service
+docker-compose restart [service-name]
+
+# Reset database (runs all migrations fresh)
+docker-compose down
+docker volume rm manager_mysql_data
+docker-compose up -d
+
+# Rebuild containers
+docker-compose build --no-cache [service-name]
+```
+
+## Database Migrations
+
+Migrations are stored in `migrations/schema/` and run automatically on fresh database init:
+- `001-099` - Schema migrations
+- `100+` - Seed data
+
+To reset and re-run all migrations:
+```bash
+docker volume rm manager_mysql_data
+docker-compose up -d mysql
+```
 
 ## API Endpoints
 
+### Authentication
+- `POST /api/auth/login` - Exchange Firebase token for JWT
+
 ### Users
-- `POST /api/users` - Create a new user
-- `GET /api/users` - Get all users
-- `GET /api/users/:id` - Get user by ID
-- `GET /api/users/firebase/:firebaseUid` - Get user by Firebase UID
-- `PATCH /api/users/:id` - Update user
-- `DELETE /api/users/:id` - Delete user
+- `POST /api/users` - Create user
+- `GET /api/users/firebase/:uid` - Get by Firebase UID
+- `GET/PATCH/DELETE /api/users/:id` - CRUD operations
 
 ### Meetings
-- `POST /api/meetings` - Create a meeting
-- `GET /api/meetings` - Get all meetings
-- `GET /api/meetings/:id` - Get meeting by ID
-- `GET /api/meetings/user/:userId` - Get user's meetings
-- `PATCH /api/meetings/:id` - Update meeting
-- `POST /api/meetings/:id/end` - End a meeting
-- `POST /api/meetings/:id/guests` - Add guest to meeting
-- `POST /api/meetings/:id/summary` - Add summary to meeting
-- `DELETE /api/meetings/:id` - Delete meeting
+- `GET/POST /api/meetings` - List/Create meetings
+- `GET/PATCH/DELETE /api/meetings/:id` - CRUD operations
+- `POST /api/meetings/:id/end` - End meeting
+- `POST /api/meetings/:id/guests` - Add guests
+- `POST /api/meetings/:id/summary` - Add summary
 
 ### Tasks
-- `POST /api/tasks` - Create a task
-- `GET /api/tasks` - Get all tasks
-- `GET /api/tasks/:id` - Get task by ID
-- `GET /api/tasks/meeting/:meetingId` - Get tasks by meeting
-- `GET /api/tasks/assignee/:assigneeId` - Get tasks by assignee
-- `PATCH /api/tasks/:id` - Update task
-- `DELETE /api/tasks/:id` - Delete task
+- `GET/POST /api/tasks` - List/Create tasks
+- `GET /api/tasks/meeting/:id` - Get by meeting
+- `GET /api/tasks/assignee/:id` - Get by assignee
+- `PATCH/DELETE /api/tasks/:id` - Update/Delete
 
-## Theme Support
+### Uploads
+- `POST /api/uploads/audio/chunk` - Chunked upload
+- `POST /api/uploads/audio/complete` - Complete file upload
 
-The application includes a fully functional light/dark theme system:
-- Theme toggle button in the navbar
-- Persists theme preference in localStorage
-- Respects system preferences by default
-- CSS variables for easy customization
+### Transcription (WebSocket)
+- Namespace: `/transcription`
+- Events: `startTranscription`, `audioData`, `transcript`, `stopTranscription`
+- Speaker events: `enrollSpeaker`, `removeSpeakerMapping`, `speakerMappingUpdated`
 
-## Development
+## Project Structure
 
-### Running Tests
-
-Backend:
-```bash
-cd backend
-npm run test
+```
+manager/
+├── frontend/              # Angular 21 application
+│   ├── src/
+│   │   ├── app/
+│   │   │   ├── components/   # UI components
+│   │   │   ├── services/     # Business logic
+│   │   │   └── models/       # TypeScript interfaces
+│   │   └── environments/     # Environment configs
+│   └── angular.json
+│
+├── backend/               # NestJS 11 application
+│   ├── src/
+│   │   ├── auth/            # JWT authentication
+│   │   ├── users/           # User management
+│   │   ├── meetings/        # Meeting CRUD
+│   │   ├── tasks/           # Task management
+│   │   ├── uploads/         # File upload handling
+│   │   ├── transcription/   # WebSocket & Speech-to-Text
+│   │   └── utils/           # Utilities (name extractor, etc.)
+│   └── google-credentials.json
+│
+├── diarization/           # Pyannote service (Python/Flask)
+│   └── app.py
+│
+├── migrations/
+│   └── schema/            # SQL migrations (auto-run on init)
+│
+└── docker-compose.yml
 ```
 
-Frontend:
-```bash
-cd frontend
-npm test
-```
+## Development Notes
 
-### Building for Production
+### Hot Reload
+Both frontend and backend support hot-reload in Docker. Changes to source files are automatically detected.
 
-Backend:
-```bash
-cd backend
-npm run build
-```
+### Environment Files
+- `environment.ts` - Template with placeholders (committed)
+- `environment.local.ts` - Local dev config (gitignored)
+- `environment.prod.ts` - Production config (set via CI/CD)
 
-Frontend:
-```bash
-cd frontend
-npm run build
-```
-
-## Next Steps (To Be Implemented)
-
-1. **Meeting Recording**
-   - Integrate audio/video recording functionality
-   - Upload recordings to cloud storage
-
-2. **AI Integration**
-   - Implement AI service for meeting transcription
-   - Auto-detect participants from audio
-   - Generate meeting summaries
-   - Extract action items and decisions
-
-3. **Dashboard Component**
-   - Display user's meetings
-   - Show assigned tasks
-   - Statistics and insights
-
-4. **Meeting Detail Component**
-   - Recording interface
-   - Real-time recording status
-   - Display meeting summary
-   - Show detected guests
-
-5. **Task Board (Trello-like)**
-   - Drag-and-drop task cards
-   - Task status columns (To Do, In Progress, Done)
-   - Task assignment
-   - Due date management
-
-6. **Notifications**
-   - Email notifications for task assignments
-   - Meeting reminders
-
-7. **Search and Filters**
-   - Search meetings by title, participants
-   - Filter tasks by status, priority, assignee
+### Diarization Service
+The diarization Docker image is ~24GB due to ML models. It's cached after first build. The HuggingFace token is only needed for initial model download; all inference runs locally on GPU.
 
 ## Contributing
 
