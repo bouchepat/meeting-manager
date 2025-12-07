@@ -7,15 +7,15 @@ services:
     container_name: meeting-manager-db-prod
     restart: always
     environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
-      MYSQL_DATABASE: meeting_manager
-      MYSQL_USER: ${MYSQL_USER}
-      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+      MYSQL_ROOT_PASSWORD: ${DATABASE_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${DATABASE_NAME:-meeting_manager}
+      MYSQL_USER: ${DATABASE_USER}
+      MYSQL_PASSWORD: ${DATABASE_PASSWORD}
     volumes:
       - mysql_data:/var/lib/mysql
-      - ./database-schema.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./migrations/schema:/docker-entrypoint-initdb.d:ro
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD}"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${DATABASE_ROOT_PASSWORD}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -33,14 +33,21 @@ services:
     environment:
       DATABASE_HOST: mysql
       DATABASE_PORT: 3306
-      DATABASE_USER: ${MYSQL_USER}
-      DATABASE_PASSWORD: ${MYSQL_PASSWORD}
-      DATABASE_NAME: meeting_manager
+      DATABASE_USER: ${DATABASE_USER}
+      DATABASE_PASSWORD: ${DATABASE_PASSWORD}
+      DATABASE_NAME: ${DATABASE_NAME:-meeting_manager}
       JWT_SECRET: ${JWT_SECRET}
       PORT: 3000
       NODE_ENV: production
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      DEEPGRAM_API_KEY: ${DEEPGRAM_API_KEY}
+      DIARIZATION_SERVICE_URL: http://diarization:5000
+      GOOGLE_APPLICATION_CREDENTIALS: /app/google-credentials.json
     ports:
       - "3000:3000"
+    volumes:
+      - uploads_data:/app/uploads
+      - ./google-credentials.json:/app/google-credentials.json:ro
     depends_on:
       mysql:
         condition: service_healthy
@@ -63,8 +70,35 @@ services:
     networks:
       - meeting-manager-network
 
+  # Speaker Diarization Service (pyannote)
+  diarization:
+    build:
+      context: ./diarization
+      dockerfile: Dockerfile
+    container_name: meeting-manager-diarization-prod
+    restart: always
+    environment:
+      HUGGINGFACE_TOKEN: ${HUGGINGFACE_TOKEN}
+      PORT: 5000
+    volumes:
+      - uploads_data:/app/uploads
+      - hf_cache:/root/.cache/huggingface
+    networks:
+      - meeting-manager-network
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+
 volumes:
   mysql_data:
+    driver: local
+  uploads_data:
+    driver: local
+  hf_cache:
     driver: local
 
 networks:
